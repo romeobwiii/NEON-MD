@@ -141,7 +141,7 @@ async function connectToWA() {
         if (shouldReconnect) setTimeout(() => connectToWA(), 5000)
       } else if (connection === 'open') {
           console.log('[ ❤️ ] Installing Plugins...')
-          fs.readdirSync("./plugins/").forEach((plugin) => {
+          fs.readdirSync("./popkid/").forEach((plugin) => {
             if (path.extname(plugin).toLowerCase() === ".js") require("./plugins/" + plugin)
           })
           console.log('[ 🪀 ] Bot connected to WhatsApp ✅')
@@ -152,9 +152,9 @@ async function connectToWA() {
           const channelJid = "120363423997837331@newsletter"
           try {
             await conn.newsletterFollow(channelJid)
-            console.log(`Successfully followed channel: ${channelJid}`)
+            console.log(`success✅: ${channelJid}`)
           } catch (error) {
-            console.error(`Failed to follow channel: ${error}`)
+            console.error(`failed❎: ${error}`)
           }
       }
     })
