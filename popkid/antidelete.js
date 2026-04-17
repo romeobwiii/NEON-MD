@@ -1,109 +1,58 @@
-const { cmd } = require("../command");
-const config = require("../config");
+/**
+ * Plugin: AntiDelete
+ * Commands: .antidelete on | off | indm
+ * Creator: popkid
+ * 
+ * Modes:
+ *   inchat  — resend deleted message in the same chat
+ *   indm    — resend deleted message to bot's own DM (private)
+ *   false   — disabled
+ */
 
-// ================================
-// ANTI DELETE EVENT LISTENER
-// ================================
+const { commands } = require('../command')
+const config = require('../config')
 
-cmd({ on: "messages.update" }, async (client, updates) => {
-    try {
-        if (!config.ANTI_DELETE) return;
+commands.push({
+    pattern: 'antidelete',
+    alias: ['antidel', 'ad'],
+    react: '🛡️',
+    desc: 'Enable or disable antidelete feature',
+    type: 'owner',
+    function: async (conn, mek, m, { args, reply, isOwner }) => {
+        if (!isOwner) return reply('❌ Only the owner can use this command.')
 
-        for (const update of updates) {
+        const sub = (args[0] || '').toLowerCase()
 
-            if (!update.update) continue;
-
-            const protocol = update.update.protocolMessage;
-
-            // Detect delete for everyone
-            if (protocol && protocol.type === 0) {
-
-                const key = protocol.key;
-
-                // Try loading original message from store
-                const originalMsg = await client.loadMessage?.(key.remoteJid, key.id);
-
-                if (!originalMsg) return;
-
-                const sender = key.participant || key.remoteJid;
-
-                const caption =
-`*🚫 ANTI DELETE DETECTED 🚫*
-
-👤 *User:* @${sender.split("@")[0]}
-🕒 *Time:* ${new Date().toLocaleString()}
-
-_Recovered deleted message below_`;
-
-                // Send alert
-                await client.sendMessage(client.user.id, {
-                    text: caption,
-                    mentions: [sender]
-                });
-
-                // Forward deleted message
-                await client.copyNForward(
-                    client.user.id,
-                    originalMsg,
-                    true
-                );
-            }
+        if (!sub) {
+            const current = config.ANTIDELETE || 'false'
+            return reply(
+                `🛡️ *POPKID-MD AntiDelete*\n\n` +
+                `• Current Mode: *${current.toUpperCase()}*\n\n` +
+                `📖 *Modes:*\n` +
+                `*.antidelete on* — Recover in same chat\n` +
+                `*.antidelete indm* — Recover in bot DM (private)\n` +
+                `*.antidelete off* — Disable antidelete`
+            )
         }
 
-    } catch (err) {
-        console.log("AntiDelete Error:", err);
+        if (sub === 'on') {
+            config.ANTIDELETE = 'inchat'
+            return reply('✅ *AntiDelete ON*\nDeleted messages will be recovered *in the same chat*.')
+        }
+
+        if (sub === 'indm') {
+            config.ANTIDELETE = 'indm'
+            return reply('✅ *AntiDelete ON (DM Mode)*\nDeleted messages will be sent to *bot\'s own DM* privately.')
+        }
+
+        if (sub === 'off' || sub === 'false') {
+            config.ANTIDELETE = 'false'
+            return reply('🔴 *AntiDelete DISABLED*\nDeleted messages will no longer be recovered.')
+        }
+
+        return reply(
+            `⚠️ Unknown option: *${sub}*\n\n` +
+            `Use:\n*.antidelete on* — same chat\n*.antidelete indm* — bot DM\n*.antidelete off* — disable`
+        )
     }
-});
-
-
-// ================================
-// ANTI DELETE TOGGLE COMMAND
-// ================================
-
-cmd({
-    pattern: "antidelete",
-    alias: ["nodelete","atd"],
-    desc: "Toggle Anti Delete",
-    category: "owner",
-    react: "🗑️",
-    filename: __filename,
-    fromMe: true
-},
-async (client, message, m, { args, from }) => {
-
-    try {
-
-        const action = args[0]?.toLowerCase();
-
-        if (action === "on") {
-            config.ANTI_DELETE = true;
-
-            return await client.sendMessage(from,{
-                text: "✅ *Anti Delete Enabled*\nDeleted messages will be restored."
-            },{ quoted: message });
-        }
-
-        if (action === "off") {
-            config.ANTI_DELETE = false;
-
-            return await client.sendMessage(from,{
-                text: "❌ *Anti Delete Disabled*"
-            },{ quoted: message });
-        }
-
-        return await client.sendMessage(from,{
-            text: `🗑️ *Anti Delete Status*\n\n${
-                config.ANTI_DELETE ? "✅ Enabled" : "❌ Disabled"
-            }`
-        },{ quoted: message });
-
-    } catch(e) {
-
-        console.log("Command Error:",e)
-
-        await client.sendMessage(from,{
-            text:"⚠️ Error occurred."
-        })
-    }
-
-});
+})
